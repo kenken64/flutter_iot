@@ -28,11 +28,11 @@ samples, guidance on mobile development, and a full API reference.
 
 # Arduino ESP32 Firmware
 
-- First Arduino Sketch consist of the following sensory data
+##First Arduino Sketch consist of the following sensory data
  * Room's temperature
  * Room's humidity
  * Room's door state
 
-- Second Arduino Sketch consist of the following sensory data
+##Second Arduino Sketch consist of the following sensory data
  * Human/living life form movment
 
