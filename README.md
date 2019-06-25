@@ -1,6 +1,6 @@
 # Flutter Internet of Things Demo
 
-<img src="docs/demo.gif" width="400px" height="800px">
+<img src="docs/demo.gif" width="500px" height="800px">
 
 <img src="docs/1.jpg" width="400px" height="800px">
 
