@@ -1,5 +1,7 @@
 # Flutter Internet of Things Demo
 
+<img src="docs/demo.gif" width="400px" height="600px">
+
 This project demonstrate how flutter mobile app integrates with the Blynk Iot Platform.
 Monitor the following sensory data:-
 - Temperature
