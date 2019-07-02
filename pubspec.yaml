@@ -47,6 +47,7 @@ flutter:
     - assets/door-open.png
     - assets/humidity.png
     - assets/temperature.png
+    - assets/motion.png
     
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -11,8 +11,13 @@
 String receivedTemperatureValue = "";
 String receivedHumidityValue = "";
 #define uS_TO_S_FACTOR 1000000  //Conversion factor for micro seconds to seconds
-#define TIME_TO_SLEEP  20       //Time ESP32 will go to sleep (in seconds)
+#define TIME_TO_SLEEP  90       //Time ESP32 will go to sleep (in seconds)
 RTC_DATA_ATTR int bootCount = 0;
+RTC_DATA_ATTR int reconnectCount = 0;
+long OnTime1 = 250; 
+long OnTime2 = 330;
+unsigned long previousMillis1 = 0;
+unsigned long previousMillis2 = 0;
 
 static BLEAddress *addressOfOurThermometer;
 BLERemoteService* remoteServiceOfTheThermometer;
@@ -25,12 +30,12 @@ const int greenLED = 2;
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
-char auth[] = "xxx";
+char auth[] = "238dc3bbbcfc4ed39a97c212d51f313a";
 
 // Your WiFi credentials.
 // Set password to "" for open networks.
-char ssid[] = "xxx";
-char pass[] = "xxxx";
+char ssid[] = "kenken64";
+char pass[] = "7730112910100";
 
 BlynkTimer timer;
 
@@ -41,35 +46,41 @@ class theEventsThatWeAreInterestedInDuringScanning: public BLEAdvertisedDeviceCa
       addressOfOurThermometer = new BLEAddress(advertisedDevice.getAddress()); } } };                        
 
 static void notifyAsEachTemperatureValueIsReceived(BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* receivedNotification, size_t length, bool isNotify) { 
-                                                                                                                 
-  for (int i=2; i<=5; i++) {
-    receivedTemperatureValue += (char)*(receivedNotification+i); 
+  unsigned long currentMillis = millis();
+  if((currentMillis - previousMillis2 >= OnTime1))
+  {
+    delay(500);                                                                                                               
+    for (int i=2; i<=5; i++) {
+      receivedTemperatureValue += (char)*(receivedNotification+i); 
+    }
+  
+    for (int i=9; i<=12; i++) {
+      receivedHumidityValue += (char)*(receivedNotification+i); 
+    }
+    Serial.println(receivedTemperatureValue);
+    Serial.println(receivedHumidityValue);
+    delay(3000);
+    if (receivedTemperatureValue.length() < 0 && receivedHumidityValue.length() < 0) return;
+  
+    int doorstate = digitalRead(doorSensor);
+    if(doorstate == 1){
+      Blynk.virtualWrite(V2, "Open");
+      Serial.println("Open");
+      digitalWrite(greenLED,HIGH);
+    }else{
+      Blynk.virtualWrite(V2, "Closed");
+      Serial.println("Closed");
+      digitalWrite(greenLED,LOW);
+    }
+    delay(2000);
+    Blynk.virtualWrite(V0, receivedTemperatureValue);
+    Blynk.virtualWrite(V1, receivedHumidityValue);
+    Serial.println("Disconnect from BLE device.");
+    thisOurMicrocontrollerAsClient->disconnect();
+    hibernate();
+    previousMillis2 = currentMillis;
   }
-
-  for (int i=9; i<=12; i++) {
-    receivedHumidityValue += (char)*(receivedNotification+i); 
-  }
-  Serial.println(receivedTemperatureValue);
-  Serial.println(receivedHumidityValue);
-  delay(3000);
-  if (receivedTemperatureValue.length() < 0 && receivedHumidityValue.length() < 0) return;
-
-  int doorstate = digitalRead(doorSensor);
-  if(doorstate == 1){
-    Blynk.virtualWrite(V2, "Open");
-    Serial.println("Open");
-    digitalWrite(greenLED,HIGH);
-  }else{
-    Blynk.virtualWrite(V2, "Closed");
-    Serial.println("Closed");
-    digitalWrite(greenLED,LOW);
-  }
-  delay(2000);
-  Blynk.virtualWrite(V0, receivedTemperatureValue);
-  Blynk.virtualWrite(V1, receivedHumidityValue);
-  Serial.println("Disconnect from BLE device.");
-  thisOurMicrocontrollerAsClient->disconnect();
-  hibernate();
+  
 } 
 
 void hibernate() {
@@ -78,74 +89,79 @@ void hibernate() {
   " Seconds");
   Serial.println("Going to sleep now.");
   Serial.flush();
-  delay(1000);
+  delay(2000);
   esp_deep_sleep_start();
 }
 
 void readTempHumidity() {
-  if (thisOurMicrocontrollerAsClient->isConnected() == false) {
-    thisOurMicrocontrollerAsClient->disconnect(); 
-    delay(20); 
-    thisOurMicrocontrollerAsClient->connect(*addressOfOurThermometer); 
-    startTime = millis(); 
-  } // Here the our ESP32 as a client asks for a connection to the desired target device.
-  
-  if( thisOurMicrocontrollerAsClient->isConnected() == false ) {
-    Serial.println(F("e4 Connection couln't be established"));
-  }
-  
-  if (remoteServiceOfTheThermometer == nullptr) { 
-    remoteServiceOfTheThermometer = thisOurMicrocontrollerAsClient->getService("226c0000-6476-4566-7562-66734470666d"); 
-  }                                            
-  
-  if (remoteServiceOfTheThermometer == nullptr) {
-    thisOurMicrocontrollerAsClient->disconnect(); 
-  }                  
-  
-  if (characteristicOfTheTemperatureMeasurementValue == nullptr) { 
-    characteristicOfTheTemperatureMeasurementValue = remoteServiceOfTheThermometer->getCharacteristic("226caa55-6476-4566-7562-66734470666d"); 
-  }    
-  
-  if (characteristicOfTheTemperatureMeasurementValue == nullptr) {
-    thisOurMicrocontrollerAsClient->disconnect(); 
-  } 
-
-  if(characteristicOfTheTemperatureMeasurementValue != nullptr){
-    characteristicOfTheTemperatureMeasurementValue->registerForNotify(notifyAsEachTemperatureValueIsReceived); 
-  }
-  
-  if (descriptorForStartingAndEndingNotificationsFromCharacteristic == nullptr) { 
-    descriptorForStartingAndEndingNotificationsFromCharacteristic = characteristicOfTheTemperatureMeasurementValue->getDescriptor(BLEUUID((uint16_t)0x2902));
-  }                                                                                 
-  
-  if (descriptorForStartingAndEndingNotificationsFromCharacteristic == nullptr) {
-    thisOurMicrocontrollerAsClient->disconnect(); 
-  } 
-  
-  uint8_t startNotifications[2] = {0x01,0x00}; 
-  if(descriptorForStartingAndEndingNotificationsFromCharacteristic != nullptr){
-    descriptorForStartingAndEndingNotificationsFromCharacteristic->writeValue(startNotifications, 2, false);      
-  }
-                                                                                                                                                                  // Ideas: https://stackoverflow.com/questions/1269568/how-to-pass-a-constant-array-literal-to-a-function-that-takes-a-pointer-without
-  startTime = millis(); 
-  while( ( (millis() - startTime) < 5000) && (receivedTemperatureValue.length() < 4) )
-  { 
+  unsigned long currentMillis = millis();
+  if((currentMillis - previousMillis1 >= OnTime1))
+  {
     if (thisOurMicrocontrollerAsClient->isConnected() == false) {
+      thisOurMicrocontrollerAsClient->disconnect(); 
+      delay(20); 
+      thisOurMicrocontrollerAsClient->connect(*addressOfOurThermometer); 
+      startTime = millis(); 
+    } // Here the our ESP32 as a client asks for a connection to the desired target device.
+    
+    if( thisOurMicrocontrollerAsClient->isConnected() == false ) {
+      Serial.println(F("e4 Connection couln't be established"));
+    }
+    
+    if (remoteServiceOfTheThermometer == nullptr) { 
+      remoteServiceOfTheThermometer = thisOurMicrocontrollerAsClient->getService("226c0000-6476-4566-7562-66734470666d"); 
+    }                                            
+    
+    if (remoteServiceOfTheThermometer == nullptr) {
+      thisOurMicrocontrollerAsClient->disconnect(); 
+    }                  
+    
+    if (characteristicOfTheTemperatureMeasurementValue == nullptr) { 
+      characteristicOfTheTemperatureMeasurementValue = remoteServiceOfTheThermometer->getCharacteristic("226caa55-6476-4566-7562-66734470666d"); 
+    }    
+    
+    if (characteristicOfTheTemperatureMeasurementValue == nullptr) {
+      thisOurMicrocontrollerAsClient->disconnect(); 
     } 
+  
+    if(characteristicOfTheTemperatureMeasurementValue != nullptr){
+      characteristicOfTheTemperatureMeasurementValue->registerForNotify(notifyAsEachTemperatureValueIsReceived); 
+    }
+    
+    if (descriptorForStartingAndEndingNotificationsFromCharacteristic == nullptr) { 
+      descriptorForStartingAndEndingNotificationsFromCharacteristic = characteristicOfTheTemperatureMeasurementValue->getDescriptor(BLEUUID((uint16_t)0x2902));
+    }                                                                                 
+    
+    if (descriptorForStartingAndEndingNotificationsFromCharacteristic == nullptr) {
+      thisOurMicrocontrollerAsClient->disconnect(); 
+    } 
+    
+    uint8_t startNotifications[2] = {0x01,0x00}; 
+    if(descriptorForStartingAndEndingNotificationsFromCharacteristic != nullptr){
+      descriptorForStartingAndEndingNotificationsFromCharacteristic->writeValue(startNotifications, 2, false);      
+    }
+                                                                                                                                                                    // Ideas: https://stackoverflow.com/questions/1269568/how-to-pass-a-constant-array-literal-to-a-function-that-takes-a-pointer-without
+    startTime = millis(); 
+    while( ( (millis() - startTime) < 5000) && (receivedTemperatureValue.length() < 4) )
+    { 
+      if (thisOurMicrocontrollerAsClient->isConnected() == false) {
+      } 
+    }
+    
+    characteristicOfTheTemperatureMeasurementValue->registerForNotify(NULL);
+    uint8_t endNotifications[2] = {0x00,0x00}; 
+    descriptorForStartingAndEndingNotificationsFromCharacteristic->writeValue(endNotifications, 2, false);
+    
+    if (receivedTemperatureValue.length() < 4) Serial.println(F("e14 No proper temperature measurement value catched."));
+    thisOurMicrocontrollerAsClient->disconnect();
+    previousMillis1 = currentMillis;
   }
-  
-  characteristicOfTheTemperatureMeasurementValue->registerForNotify(NULL);
-  uint8_t endNotifications[2] = {0x00,0x00}; 
-  descriptorForStartingAndEndingNotificationsFromCharacteristic->writeValue(endNotifications, 2, false);
-  
-  if (receivedTemperatureValue.length() < 4) Serial.println(F("e14 No proper temperature measurement value catched."));
-  thisOurMicrocontrollerAsClient->disconnect();
 }
 
 void setup() {
   Serial.begin(115200);
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
-  Serial.setDebugOutput(0);
+  ++bootCount;
+  Serial.println("Boot number: " + String(bootCount));
   pinMode(doorSensor, INPUT);
   pinMode(greenLED, OUTPUT);
   BLEDevice::init("esp32tempsensor");
@@ -157,6 +173,9 @@ void setup() {
     while ( (millis()-startTime <50) && (addressOfOurThermometer == nullptr) ) { delay(1); } }
   thisOurMicrocontrollerAsClient = BLEDevice::createClient();
   digitalWrite(greenLED,LOW);
+  WiFi.softAPdisconnect(true);
+  WiFi.mode(WIFI_STA);
+  delay(300);
   Blynk.begin(auth, ssid, pass);
   Blynk.syncAll();
   timer.setInterval(1000L, readTempHumidity);
@@ -167,7 +186,11 @@ void reconnectBlynk() {
   if (!Blynk.connected()) {
     Serial.println("Lost connection");
     if(Blynk.connect()) {
+      ++reconnectCount;
       Serial.println("Reconnected");
+      if(reconnectCount > 6){
+        ESP.restart();
+      }
     }
     else {
       Serial.println("Not reconnected");

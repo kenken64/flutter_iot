@@ -7,6 +7,7 @@ final List<String> imgList = [
   'https://i.ytimg.com/vi/ifrHogDujXw/maxresdefault.jpg',
   'https://compote.slate.com/images/eb1853bf-8feb-471a-8402-00bd5bf8b30f.jpg',
   'https://www.simpsondoor.com/door-idea-gallery/fullsize/wood-double-doors-8420.jpg',
+  'https://d2gk6qz8djobw9.cloudfront.net/slider/1499945767.jpg',
 ];
 
 final List<String> imgIconList = [
@@ -14,12 +15,14 @@ final List<String> imgIconList = [
   'assets/door-open.png',
   'assets/humidity.png',
   'assets/temperature.png',
+  'assets/motion.png',
 ];
 
 final List<String> imgObjectNames = [
   'Temperature',
   'Humidity',
   'Door Sensor',
+  'Motion',
 ];
 
 void main() => runApp(CarouselDemo());
@@ -92,7 +95,7 @@ List iconsIot = [
     size: 50,
   ),
   Icon(
-    Icons.block,
+    Icons.directions_run,
     color: Colors.blue[500],
     size: 50,
   ),
@@ -109,6 +112,12 @@ class _CarouselWithIndicatorState extends State<CarouselWithIndicator> {
   var descriptions = "";
   var value = "";
   var values;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData(_current);
+  }
 
   _fetchData(_current) async {
     print("Attempting to fetch data from network..");
@@ -160,7 +169,29 @@ class _CarouselWithIndicatorState extends State<CarouselWithIndicator> {
         });
       }
     }
+
+    if(_current == 3){
+      print("motion >>");
+      final url3 = "http://blynk-cloud.com/238dc3bbbcfc4ed39a97c212d51f313a/get/V3";
+      final response3 = await http.get(url3);
+      if(response3.statusCode == 200){
+        print(response3.body);
+        final map = json.decode(response3.body);
+        setState(() {
+          this.descriptions = "Movement";
+          var withoutbracket = map.toString().replaceAll("[", '');
+          withoutbracket = withoutbracket.replaceAll("]", '');
+          if(withoutbracket == '1'){
+            withoutbracket = "Motion detected";
+          }else{
+            withoutbracket = "No motion detected";
+          }
+          this.value = withoutbracket;
+          this.iconIndex = _current;
+        });
+      }
     }
+  }
 
   @override
   Widget build(BuildContext context) {
