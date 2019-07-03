@@ -30,12 +30,12 @@ const int greenLED = 2;
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
-char auth[] = "238dc3bbbcfc4ed39a97c212d51f313a";
+char auth[] = "xxx";
 
 // Your WiFi credentials.
 // Set password to "" for open networks.
-char ssid[] = "kenken64";
-char pass[] = "7730112910100";
+char ssid[] = "xxx";
+char pass[] = "xxx";
 
 BlynkTimer timer;
 
@@ -161,6 +161,10 @@ void readTempHumidity() {
 void setup() {
   Serial.begin(115200);
   ++bootCount;
+  if(bootCount > 20){
+    delay(15000);
+    ESP.reset();
+  }
   Serial.println("Boot number: " + String(bootCount));
   pinMode(doorSensor, INPUT);
   pinMode(greenLED, OUTPUT);
