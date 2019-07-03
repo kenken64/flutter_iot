@@ -25,17 +25,16 @@ static BLERemoteCharacteristic* characteristicOfTheTemperatureMeasurementValue;
 BLERemoteDescriptor* descriptorForStartingAndEndingNotificationsFromCharacteristic;
 BLEClient*  thisOurMicrocontrollerAsClient;
 unsigned long startTime PROGMEM ;
-const int doorSensor = 4;
 const int greenLED = 2;
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
-char auth[] = "xxx";
+char auth[] = "238dc3bbbcfc4ed39a97c212d51f313a";
 
 // Your WiFi credentials.
 // Set password to "" for open networks.
-char ssid[] = "xxx";
-char pass[] = "xxx";
+char ssid[] = "kenken64";
+char pass[] = "7730112910100";
 
 BlynkTimer timer;
 
@@ -61,17 +60,6 @@ static void notifyAsEachTemperatureValueIsReceived(BLERemoteCharacteristic* pBLE
     Serial.println(receivedHumidityValue);
     delay(3000);
     if (receivedTemperatureValue.length() < 0 && receivedHumidityValue.length() < 0) return;
-  
-    int doorstate = digitalRead(doorSensor);
-    if(doorstate == 1){
-      Blynk.virtualWrite(V2, "Open");
-      Serial.println("Open");
-      digitalWrite(greenLED,HIGH);
-    }else{
-      Blynk.virtualWrite(V2, "Closed");
-      Serial.println("Closed");
-      digitalWrite(greenLED,LOW);
-    }
     delay(2000);
     Blynk.virtualWrite(V0, receivedTemperatureValue);
     Blynk.virtualWrite(V1, receivedHumidityValue);
@@ -89,6 +77,7 @@ void hibernate() {
   " Seconds");
   Serial.println("Going to sleep now.");
   Serial.flush();
+  digitalWrite(greenLED,LOW);
   delay(2000);
   esp_deep_sleep_start();
 }
@@ -163,10 +152,9 @@ void setup() {
   ++bootCount;
   if(bootCount > 20){
     delay(15000);
-    ESP.reset();
+    ESP.restart();
   }
   Serial.println("Boot number: " + String(bootCount));
-  pinMode(doorSensor, INPUT);
   pinMode(greenLED, OUTPUT);
   BLEDevice::init("esp32tempsensor");
   BLEScan* myBLEScanner = BLEDevice::getScan();
@@ -176,7 +164,7 @@ void setup() {
     myBLEScanner->start(30); startTime=millis();
     while ( (millis()-startTime <50) && (addressOfOurThermometer == nullptr) ) { delay(1); } }
   thisOurMicrocontrollerAsClient = BLEDevice::createClient();
-  digitalWrite(greenLED,LOW);
+  digitalWrite(greenLED,HIGH);
   WiFi.softAPdisconnect(true);
   WiFi.mode(WIFI_STA);
   delay(300);
@@ -184,6 +172,7 @@ void setup() {
   Blynk.syncAll();
   timer.setInterval(1000L, readTempHumidity);
   timer.setInterval(30*1000, reconnectBlynk); //run every 30s
+  
 }
 
 void reconnectBlynk() {
