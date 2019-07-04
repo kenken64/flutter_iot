@@ -11,7 +11,7 @@
 String receivedTemperatureValue = "";
 String receivedHumidityValue = "";
 #define uS_TO_S_FACTOR 1000000  //Conversion factor for micro seconds to seconds
-#define TIME_TO_SLEEP  90       //Time ESP32 will go to sleep (in seconds)
+#define TIME_TO_SLEEP  5       //Time ESP32 will go to sleep (in seconds)
 RTC_DATA_ATTR int bootCount = 0;
 RTC_DATA_ATTR int reconnectCount = 0;
 long OnTime1 = 250; 
@@ -72,14 +72,15 @@ static void notifyAsEachTemperatureValueIsReceived(BLERemoteCharacteristic* pBLE
 } 
 
 void hibernate() {
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+  //esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
   Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
   " Seconds");
   Serial.println("Going to sleep now.");
   Serial.flush();
   digitalWrite(greenLED,LOW);
   delay(2000);
-  esp_deep_sleep_start();
+  //esp_deep_sleep_start();
+  ESP.restart();
 }
 
 void readTempHumidity() {
@@ -150,20 +151,13 @@ void readTempHumidity() {
 void setup() {
   Serial.begin(115200);
   ++bootCount;
-  if(bootCount > 20){
+  /*
+  if(bootCount > 16){
     delay(15000);
     ESP.restart();
-  }
+  }*/
   Serial.println("Boot number: " + String(bootCount));
   pinMode(greenLED, OUTPUT);
-  BLEDevice::init("esp32tempsensor");
-  BLEScan* myBLEScanner = BLEDevice::getScan();
-  myBLEScanner->setAdvertisedDeviceCallbacks(new theEventsThatWeAreInterestedInDuringScanning());
-  myBLEScanner->setActiveScan(true);
-  while (addressOfOurThermometer == nullptr) {
-    myBLEScanner->start(30); startTime=millis();
-    while ( (millis()-startTime <50) && (addressOfOurThermometer == nullptr) ) { delay(1); } }
-  thisOurMicrocontrollerAsClient = BLEDevice::createClient();
   digitalWrite(greenLED,HIGH);
   WiFi.softAPdisconnect(true);
   WiFi.mode(WIFI_STA);
@@ -172,6 +166,15 @@ void setup() {
   Blynk.syncAll();
   timer.setInterval(1000L, readTempHumidity);
   timer.setInterval(30*1000, reconnectBlynk); //run every 30s
+
+  BLEDevice::init("esp32tempsensor");
+  BLEScan* myBLEScanner = BLEDevice::getScan();
+  myBLEScanner->setAdvertisedDeviceCallbacks(new theEventsThatWeAreInterestedInDuringScanning());
+  myBLEScanner->setActiveScan(true);
+  while (addressOfOurThermometer == nullptr) {
+    myBLEScanner->start(30); startTime=millis();
+    while ( (millis()-startTime <50) && (addressOfOurThermometer == nullptr) ) { delay(1); } }
+  thisOurMicrocontrollerAsClient = BLEDevice::createClient();
   
 }
 
