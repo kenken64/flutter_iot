@@ -1,7 +1,13 @@
+import 'dart:async';
+import 'dart:io' show Platform;
+
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
+
 
 final List<String> imgList = [
   'https://i.ytimg.com/vi/ifrHogDujXw/maxresdefault.jpg',
@@ -25,7 +31,28 @@ final List<String> imgObjectNames = [
   'Motion',
 ];
 
-void main() => runApp(CarouselDemo());
+
+Future<void> main() async {
+  final FirebaseApp app = await FirebaseApp.configure(
+    name: 'mijia-thermostat',
+    options: Platform.isIOS
+        ? const FirebaseOptions(
+            googleAppID: '1:999431981277:ios:8f973cd62f1f2d86',
+            gcmSenderID: '999431981277',
+            databaseURL: 'https://mijia-thermostat.firebaseio.com',
+          )
+        : const FirebaseOptions(
+            googleAppID: '1:999431981277:android:70678bb0b07b2375',
+            apiKey: 'AIzaSyCfGnx3sDUolTv7-4t7-jVI19UhIYb6AYU',
+            databaseURL: 'https://mijia-thermostat.firebaseio.com',
+          ),
+  );
+  runApp(MaterialApp(
+    title: 'Flutter iot',
+    home: CarouselDemo(app: app),
+  ));
+}
+//void main() => runApp(CarouselDemo());
 
 final Widget placeholder = Container(color: Colors.grey);
 
@@ -102,6 +129,8 @@ List iconsIot = [
 ];
 
 class CarouselWithIndicator extends StatefulWidget {
+  CarouselWithIndicator({this.app});
+  final FirebaseApp app;
   @override
   _CarouselWithIndicatorState createState() => _CarouselWithIndicatorState();
 }
@@ -112,11 +141,33 @@ class _CarouselWithIndicatorState extends State<CarouselWithIndicator> {
   var descriptions = "";
   var value = "";
   var values;
+  DatabaseReference _tempThresholdRef;
+  DatabaseReference _notificationRef;
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
     _fetchData(_current);
+     _tempThresholdRef = FirebaseDatabase.instance.reference().child('tempthreshold');
+    // Demonstrates configuring the database directly
+    final FirebaseDatabase database = FirebaseDatabase(app: widget.app);
+    _notificationRef = database.reference().child('notification');
+    database.reference().child('tempthreshold').once().then((DataSnapshot snapshot) {
+      print('Connected to second database and read ${snapshot.value}');
+    });
+    database.setPersistenceEnabled(true);
+    database.setPersistenceCacheSizeBytes(10000000);
+  }
+
+  _createRecord(){
+    _tempThresholdRef.set({
+      'title': 'Flutter in Action',
+      'description': 'Complete Programming Guide to learn Flutter'
+    });
   }
 
   _fetchData(_current) async {
@@ -205,6 +256,7 @@ class _CarouselWithIndicatorState extends State<CarouselWithIndicator> {
           setState(() {
             _current = index;
             _fetchData(_current);
+            _createRecord();
           });
         },
       ),
@@ -247,9 +299,11 @@ class _CarouselWithIndicatorState extends State<CarouselWithIndicator> {
   }
 }
 
-
-
 class CarouselDemo extends StatelessWidget {
+
+  CarouselDemo({this.app});
+  final FirebaseApp app;
+  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -262,7 +316,7 @@ class CarouselDemo extends StatelessWidget {
                 padding: EdgeInsets.symmetric(vertical: 15.0),
                 child: Column(children: [
                   Text('Sensor data'),
-                  CarouselWithIndicator(),
+                  CarouselWithIndicator(app: app),
             ])),
           ],
         ),

@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "999431981277",
+    "firebase_url": "https://mijia-thermostat.firebaseio.com",
+    "project_id": "mijia-thermostat",
+    "storage_bucket": "mijia-thermostat.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:999431981277:android:70678bb0b07b2375",
+        "android_client_info": {
+          "package_name": "com.example.flutter_iot"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "999431981277-j9sgjjvtlfa29rq5cbhv8ta7rd373d1m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCfGnx3sDUolTv7-4t7-jVI19UhIYb6AYU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "999431981277-j9sgjjvtlfa29rq5cbhv8ta7rd373d1m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
