@@ -165,8 +165,8 @@ class _CarouselWithIndicatorState extends State<CarouselWithIndicator> {
 
   _createRecord(){
     _tempThresholdRef.set({
-      'title': 'Flutter in Action',
-      'description': 'Complete Programming Guide to learn Flutter'
+      'value': '4',
+      'message': 'temperature is above 4 Celcius'
     });
   }
 
