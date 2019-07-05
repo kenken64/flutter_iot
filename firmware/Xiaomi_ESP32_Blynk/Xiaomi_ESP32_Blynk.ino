@@ -12,10 +12,10 @@ String receivedTemperatureValue = "";
 String receivedHumidityValue = "";
 #define uS_TO_S_FACTOR 1000000  //Conversion factor for micro seconds to seconds
 #define TIME_TO_SLEEP  5       //Time ESP32 will go to sleep (in seconds)
-RTC_DATA_ATTR int bootCount = 0;
+//RTC_DATA_ATTR int bootCount = 0;
 RTC_DATA_ATTR int reconnectCount = 0;
 long OnTime1 = 250; 
-long OnTime2 = 330;
+long OnTime2 = 360;
 unsigned long previousMillis1 = 0;
 unsigned long previousMillis2 = 0;
 
@@ -150,18 +150,26 @@ void readTempHumidity() {
 
 void setup() {
   Serial.begin(115200);
-  ++bootCount;
+  //++bootCount;
   /*
   if(bootCount > 16){
     delay(15000);
     ESP.restart();
   }*/
-  Serial.println("Boot number: " + String(bootCount));
+  //Serial.println("Boot number: " + String(bootCount));
   pinMode(greenLED, OUTPUT);
   digitalWrite(greenLED,HIGH);
-  WiFi.softAPdisconnect(true);
+ //DO NOT TOUCH
+  //  This is here to force the ESP32 to reset the WiFi and initialise correctly.
+  Serial.print("WIFI status = ");
+  Serial.println(WiFi.getMode());
+  WiFi.disconnect(true);
+  delay(1000);
   WiFi.mode(WIFI_STA);
-  delay(300);
+  delay(1000);
+  Serial.print("WIFI status = ");
+  Serial.println(WiFi.getMode());
+  // End silly stuff !!!
   Blynk.begin(auth, ssid, pass);
   Blynk.syncAll();
   timer.setInterval(1000L, readTempHumidity);
