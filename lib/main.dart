@@ -112,6 +112,7 @@ class _CarouselWithIndicatorState extends State<CarouselWithIndicator> {
   var descriptions = "";
   var value = "";
   var values;
+  bool visibilityTag = false;
 
   @override
   void initState() {
@@ -133,6 +134,7 @@ class _CarouselWithIndicatorState extends State<CarouselWithIndicator> {
           withoutbracket = withoutbracket.replaceAll("]", '');
           this.value = withoutbracket;
           this.iconIndex = _current;
+          this.visibilityTag = true;
         });
       }
     }
@@ -239,6 +241,7 @@ class _CarouselWithIndicatorState extends State<CarouselWithIndicator> {
                 leading: iconsIot[this.iconIndex],
               ),
               Divider(),
+              visibilityTag ? Text("1"): Text("2")
             ],
           ),
         ),
