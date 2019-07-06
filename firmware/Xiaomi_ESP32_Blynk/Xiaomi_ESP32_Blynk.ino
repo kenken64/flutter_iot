@@ -73,13 +73,17 @@ static void notifyAsEachTemperatureValueIsReceived(BLERemoteCharacteristic* pBLE
 
 void hibernate() {
   //esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-  Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
-  " Seconds");
-  Serial.println("Going to sleep now.");
+  //Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
+  //" Seconds");
+  Serial.println("Going to restart now.");
   Serial.flush();
   digitalWrite(greenLED,LOW);
   delay(2000);
   //esp_deep_sleep_start();
+  ESP_LOGE(ResetTimer::LOG_TAG, "ResetTimer not stopped in time, going down for reset in 5 secs");
+  WiFi.disconnect();
+  delay(3600000);
+  ESP_LOGW(ResetTimer::LOG_TAG, "going down for reset now"); 
   ESP.restart();
 }
 
@@ -143,6 +147,8 @@ void readTempHumidity() {
     descriptorForStartingAndEndingNotificationsFromCharacteristic->writeValue(endNotifications, 2, false);
     
     if (receivedTemperatureValue.length() < 4) Serial.println(F("e14 No proper temperature measurement value catched."));
+    BLEScan* myBLEScanner = BLEDevice::getScan();
+    myBLEScanner->setActiveScan(false);
     thisOurMicrocontrollerAsClient->disconnect();
     previousMillis1 = currentMillis;
   }
@@ -163,8 +169,6 @@ void setup() {
   //  This is here to force the ESP32 to reset the WiFi and initialise correctly.
   Serial.print("WIFI status = ");
   Serial.println(WiFi.getMode());
-  WiFi.disconnect(true);
-  delay(1000);
   WiFi.mode(WIFI_STA);
   delay(1000);
   Serial.print("WIFI status = ");
