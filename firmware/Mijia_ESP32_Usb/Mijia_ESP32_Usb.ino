@@ -1,10 +1,3 @@
-#define BLYNK_PRINT Serial
-
-#include <WiFi.h>
-//#include <WiFiClient.h>
-#include <Preferences.h>
-#include <Esp32WifiManager.h>
-#include <BlynkSimpleEsp32.h>
 #include "BLEDevice.h"
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -12,28 +5,21 @@
 String receivedTemperatureValue = "";
 String receivedHumidityValue = "";
 #define uS_TO_S_FACTOR 1000000  //Conversion factor for micro seconds to seconds
-#define TIME_TO_SLEEP  5       //Time ESP32 will go to sleep (in seconds)
+#define TIME_TO_SLEEP  10       //Time ESP32 will go to sleep (in seconds)
 RTC_DATA_ATTR int bootCount = 0;
 RTC_DATA_ATTR int reconnectCount = 0;
 long OnTime1 = 250; 
 long OnTime2 = 360;
 unsigned long previousMillis1 = 0;
 unsigned long previousMillis2 = 0;
+TaskHandle_t restartDeviceTaskHandle = NULL;
 
-//Create a wifi manager
-WifiManager manager;
 static BLEAddress *addressOfOurThermometer;
 BLERemoteService* remoteServiceOfTheThermometer;
 static BLERemoteCharacteristic* characteristicOfTheTemperatureMeasurementValue;
 BLERemoteDescriptor* descriptorForStartingAndEndingNotificationsFromCharacteristic;
 BLEClient*  thisOurMicrocontrollerAsClient;
 unsigned long startTime PROGMEM ;
-
-// You should get Auth Token in the Blynk App.
-// Go to the Project Settings (nut icon).
-char auth[] = "238dc3bbbcfc4ed39a97c212d51f313a";
-
-BlynkTimer timer;
 
 class theEventsThatWeAreInterestedInDuringScanning: public BLEAdvertisedDeviceCallbacks {                    
   void onResult(BLEAdvertisedDevice advertisedDevice) {                                                      
@@ -53,14 +39,10 @@ static void notifyAsEachTemperatureValueIsReceived(BLERemoteCharacteristic* pBLE
     for (int i=9; i<=12; i++) {
       receivedHumidityValue += (char)*(receivedNotification+i); 
     }
-    Serial.println(receivedTemperatureValue);
-    Serial.println(receivedHumidityValue);
+    Serial.println("TEMPERATURE|"+receivedTemperatureValue);
+    Serial.println("HUMIDITY|"+receivedHumidityValue);
+    delay(3000);
     if (receivedTemperatureValue.length() < 0 && receivedHumidityValue.length() < 0) return;
-    delay(2000);
-    Blynk.virtualWrite(V0, receivedTemperatureValue);
-    Blynk.virtualWrite(V1, receivedHumidityValue);
-    delay(2000);
-    Serial.println("Disconnect from BLE device.");
     thisOurMicrocontrollerAsClient->disconnect();
     hibernate();
     previousMillis2 = currentMillis;
@@ -70,18 +52,8 @@ static void notifyAsEachTemperatureValueIsReceived(BLERemoteCharacteristic* pBLE
 
 void hibernate() {
   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-  Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
-  " Seconds");
-  Serial.println("Going to deep sleep now.");
   Serial.flush();
-  //WiFi.disconnect(false,true);
-  ++bootCount;
-  Serial.print("bootCount = " + bootCount);
-  delay(1000);
-  if(bootCount > 3){
-    ESP.restart();
-  }
-  delay(3000);
+  delay(500);
   esp_deep_sleep_start();
 }
 
@@ -98,7 +70,7 @@ void readTempHumidity() {
     } // Here the our ESP32 as a client asks for a connection to the desired target device.
     
     if( thisOurMicrocontrollerAsClient->isConnected() == false ) {
-      Serial.println(F("e4 Connection couln't be established"));
+      //Serial.println(F("e4 Connection couln't be established"));
     }
     
     if (remoteServiceOfTheThermometer == nullptr) { 
@@ -123,8 +95,8 @@ void readTempHumidity() {
     
     if (descriptorForStartingAndEndingNotificationsFromCharacteristic == nullptr) { 
       descriptorForStartingAndEndingNotificationsFromCharacteristic = characteristicOfTheTemperatureMeasurementValue->getDescriptor(BLEUUID((uint16_t)0x2902));
-    }
-
+    }                                                                                 
+    
     if (descriptorForStartingAndEndingNotificationsFromCharacteristic == nullptr) {
       thisOurMicrocontrollerAsClient->disconnect(); 
     } 
@@ -154,23 +126,10 @@ void readTempHumidity() {
 }
 
 void setup() {
+  ++bootCount;
   Serial.begin(115200);
-  //Serial.print("WIFI status = ");
-  //Serial.println(WiFi.getMode());
-  delay(300);
-  //WiFi.mode(WIFI_STA);
-  //delay(1500);
-  //Serial.print("WIFI status = ");
-  //Serial.println(WiFi.getMode());
-  manager.setupScan();
-
-  Blynk.config(auth, IPAddress(188,166,206,43), 80);
-  Blynk.syncAll();
   
-  timer.setInterval(1000L, readTempHumidity);
-  timer.setInterval(30*1000, reconnectBlynk); //run every 30s
-
-  BLEDevice::init("");
+  BLEDevice::init("ESP32MijiaTempSensor");
   BLEScan* myBLEScanner = BLEDevice::getScan();
   myBLEScanner->setAdvertisedDeviceCallbacks(new theEventsThatWeAreInterestedInDuringScanning());
   myBLEScanner->setActiveScan(true);
@@ -178,29 +137,9 @@ void setup() {
     myBLEScanner->start(30); startTime=millis();
     while ( (millis()-startTime <50) && (addressOfOurThermometer == nullptr) ) { delay(1); } }
   thisOurMicrocontrollerAsClient = BLEDevice::createClient();
-}
-
-void reconnectBlynk() {
-  if (!Blynk.connected()) {
-    Serial.println("Lost connection");
-    if(Blynk.connect()) {
-      ++reconnectCount;
-      Serial.println("Reconnected");
-      if(reconnectCount > 6){
-        ESP.restart();
-      }
-    }
-    else {
-      Serial.println("Not reconnected");
-    }
-  }
+  
 }
 
 void loop() {
-  manager.loop();
-  if (manager.getState() == Connected) {
-    // use the Wifi Stack now connected and a device is connected to the AP
-    Blynk.run();
-    timer.run();
-  }
+  delay(1000);
 }
