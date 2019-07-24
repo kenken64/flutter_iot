@@ -1,7 +1,7 @@
 #define BLYNK_PRINT Serial
 
 #include <WiFi.h>
-//#include <WiFiClient.h>
+#include <WiFiClient.h>
 #include <Preferences.h>
 #include <Esp32WifiManager.h>
 #include <BlynkSimpleEsp32.h>
@@ -20,8 +20,7 @@ long OnTime2 = 360;
 unsigned long previousMillis1 = 0;
 unsigned long previousMillis2 = 0;
 
-//Create a wifi manager
-WifiManager manager;
+
 static BLEAddress *addressOfOurThermometer;
 BLERemoteService* remoteServiceOfTheThermometer;
 static BLERemoteCharacteristic* characteristicOfTheTemperatureMeasurementValue;
@@ -33,6 +32,10 @@ unsigned long startTime PROGMEM ;
 // Go to the Project Settings (nut icon).
 char auth[] = "238dc3bbbcfc4ed39a97c212d51f313a";
 
+// Your WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "kenken64";
+char pass[] = "7730112910100";
 BlynkTimer timer;
 
 class theEventsThatWeAreInterestedInDuringScanning: public BLEAdvertisedDeviceCallbacks {                    
@@ -56,14 +59,17 @@ static void notifyAsEachTemperatureValueIsReceived(BLERemoteCharacteristic* pBLE
     Serial.println(receivedTemperatureValue);
     Serial.println(receivedHumidityValue);
     if (receivedTemperatureValue.length() < 0 && receivedHumidityValue.length() < 0) return;
-    delay(2000);
+    delay(4000);
     Blynk.virtualWrite(V0, receivedTemperatureValue);
     Blynk.virtualWrite(V1, receivedHumidityValue);
-    delay(2000);
+    delay(20000);
     Serial.println("Disconnect from BLE device.");
-    thisOurMicrocontrollerAsClient->disconnect();
-    hibernate();
+    WiFi.disconnect(true);
+    delay(4000);
+    //thisOurMicrocontrollerAsClient->disconnect();
+    //hibernate();
     previousMillis2 = currentMillis;
+    ESP.restart();
   }
   
 } 
@@ -77,8 +83,7 @@ void hibernate() {
   //WiFi.disconnect(false,true);
   ++bootCount;
   Serial.print("bootCount = " + bootCount);
-  delay(1000);
-  if(bootCount > 3){
+  if(bootCount > 7){
     ESP.restart();
   }
   delay(3000);
@@ -155,16 +160,14 @@ void readTempHumidity() {
 
 void setup() {
   Serial.begin(115200);
-  //Serial.print("WIFI status = ");
-  //Serial.println(WiFi.getMode());
   delay(300);
-  //WiFi.mode(WIFI_STA);
-  //delay(1500);
-  //Serial.print("WIFI status = ");
-  //Serial.println(WiFi.getMode());
-  manager.setupScan();
-
-  Blynk.config(auth, IPAddress(188,166,206,43), 80);
+  Serial.println(WiFi.getMode());
+  WiFi.mode(WIFI_STA);
+  delay(1000);
+  Serial.print("WIFI status = ");
+  Serial.println(WiFi.getMode());
+  // End silly stuff !!!
+  Blynk.begin(auth, ssid, pass, IPAddress(188,166,206,43), 80);
   Blynk.syncAll();
   
   timer.setInterval(1000L, readTempHumidity);
@@ -197,10 +200,6 @@ void reconnectBlynk() {
 }
 
 void loop() {
-  manager.loop();
-  if (manager.getState() == Connected) {
-    // use the Wifi Stack now connected and a device is connected to the AP
-    Blynk.run();
-    timer.run();
-  }
+  Blynk.run();
+  timer.run();
 }
