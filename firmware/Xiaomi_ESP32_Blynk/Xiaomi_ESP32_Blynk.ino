@@ -64,12 +64,12 @@ static void notifyAsEachTemperatureValueIsReceived(BLERemoteCharacteristic* pBLE
     Blynk.virtualWrite(V1, receivedHumidityValue);
     delay(20000);
     Serial.println("Disconnect from BLE device.");
-    WiFi.disconnect(true);
+    //WiFi.disconnect(true);
     delay(4000);
     //thisOurMicrocontrollerAsClient->disconnect();
     //hibernate();
     previousMillis2 = currentMillis;
-    ESP.restart();
+    //ESP.restart();
   }
   
 } 
@@ -200,6 +200,6 @@ void reconnectBlynk() {
 }
 
 void loop() {
-  Blynk.run();
   timer.run();
+  if(Blynk.connected()) { Blynk.run(); }
 }
