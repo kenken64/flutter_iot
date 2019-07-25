@@ -16,7 +16,7 @@ String receivedHumidityValue = "";
 RTC_DATA_ATTR int bootCount = 0;
 RTC_DATA_ATTR int reconnectCount = 0;
 long OnTime1 = 250; 
-long OnTime2 = 360;
+long OnTime2 = 500;
 unsigned long previousMillis1 = 0;
 unsigned long previousMillis2 = 0;
 
@@ -61,36 +61,13 @@ static void notifyAsEachTemperatureValueIsReceived(BLERemoteCharacteristic* pBLE
     if (receivedTemperatureValue.length() < 0 && receivedHumidityValue.length() < 0) return;
     delay(4000);
     Blynk.virtualWrite(V0, receivedTemperatureValue);
+    delay(1000);
     Blynk.virtualWrite(V1, receivedHumidityValue);
-    delay(20000);
-    Serial.println("Disconnect from BLE device.");
-    //WiFi.disconnect(true);
-    delay(4000);
-    //thisOurMicrocontrollerAsClient->disconnect();
-    //hibernate();
-    previousMillis2 = currentMillis;
-    //ESP.restart();
-  }
-  
-} 
-
-void hibernate() {
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-  Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
-  " Seconds");
-  Serial.println("Going to deep sleep now.");
-  Serial.flush();
-  //WiFi.disconnect(false,true);
-  ++bootCount;
-  Serial.print("bootCount = " + bootCount);
-  if(bootCount > 7){
+    delay(60000);
     ESP.restart();
+    previousMillis2 = currentMillis;
   }
-  delay(3000);
-  esp_deep_sleep_start();
-}
-
-
+} 
 void readTempHumidity() {
   unsigned long currentMillis = millis();
   if((currentMillis - previousMillis1 >= OnTime1))
@@ -104,6 +81,7 @@ void readTempHumidity() {
     
     if( thisOurMicrocontrollerAsClient->isConnected() == false ) {
       Serial.println(F("e4 Connection couln't be established"));
+      ESP.restart();
     }
     
     if (remoteServiceOfTheThermometer == nullptr) { 
@@ -151,9 +129,6 @@ void readTempHumidity() {
     descriptorForStartingAndEndingNotificationsFromCharacteristic->writeValue(endNotifications, 2, false);
     
     if (receivedTemperatureValue.length() < 4) Serial.println(F("e14 No proper temperature measurement value catched."));
-    BLEScan* myBLEScanner = BLEDevice::getScan();
-    myBLEScanner->setActiveScan(false);
-    thisOurMicrocontrollerAsClient->disconnect();
     previousMillis1 = currentMillis;
   }
 }
@@ -166,13 +141,14 @@ void setup() {
   delay(1000);
   Serial.print("WIFI status = ");
   Serial.println(WiFi.getMode());
-  // End silly stuff !!!
+  
   Blynk.begin(auth, ssid, pass, IPAddress(188,166,206,43), 80);
+  btStart();
   Blynk.syncAll();
   
   timer.setInterval(1000L, readTempHumidity);
   timer.setInterval(30*1000, reconnectBlynk); //run every 30s
-
+  delay(300);
   BLEDevice::init("");
   BLEScan* myBLEScanner = BLEDevice::getScan();
   myBLEScanner->setAdvertisedDeviceCallbacks(new theEventsThatWeAreInterestedInDuringScanning());
@@ -201,5 +177,9 @@ void reconnectBlynk() {
 
 void loop() {
   timer.run();
-  if(Blynk.connected()) { Blynk.run(); }
+  if (Blynk.connected()) {  
+    Blynk.run();
+  } else {
+    ESP.restart();
+  }
 }
