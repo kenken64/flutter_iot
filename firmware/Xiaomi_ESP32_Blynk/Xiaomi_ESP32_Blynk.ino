@@ -3,7 +3,6 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <Preferences.h>
-#include <Esp32WifiManager.h>
 #include <BlynkSimpleEsp32.h>
 #include "BLEDevice.h"
 #include "soc/soc.h"
